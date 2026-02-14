@@ -20,7 +20,7 @@ void main() async {
 
 class MyApp extends StatelessWidget {
   final String? nombreInicial;
-  MyApp({this.nombreInicial});
+  const MyApp({super.key, this.nombreInicial});
 
   @override
   Widget build(BuildContext context) {

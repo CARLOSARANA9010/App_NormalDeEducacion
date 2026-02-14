@@ -130,7 +130,6 @@ class _LobbyScreenState extends State<LobbyScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // AppBar transparente para que las físicas fluyan por detrás
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -141,7 +140,7 @@ class _LobbyScreenState extends State<LobbyScreen>
             onPressed: () => _mostrarColaboradores(context),
             tooltip: "Colaboradores",
           ),
-          SizedBox(width: 15),
+          const SizedBox(width: 15),
         ],
       ),
       body: Stack(
@@ -150,20 +149,43 @@ class _LobbyScreenState extends State<LobbyScreen>
           SafeArea(
             child: Column(
               children: [
-                SizedBox(height: 20),
-                Text(
-                  "¡Hola, ${widget.nombreAlumna}! 👋",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.indigo[900],
+                const SizedBox(height: 20),
+
+                // --- SECCIÓN DE SALUDO CORREGIDA ---
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 30),
+                  child: Column(
+                    children: [
+                      Text(
+                        "¡Hola, ${widget.nombreAlumna}! 👋",
+                        textAlign: TextAlign
+                            .center, // Centra el texto si hay varias líneas
+                        style: TextStyle(
+                          fontSize: 26, // Reducido un poco para nombres largos
+                          fontWeight: FontWeight.bold,
+                          color: Colors.indigo[900],
+                        ),
+                        maxLines: 2, // Permite máximo 2 líneas
+                        overflow: TextOverflow
+                            .ellipsis, // Si es más largo, pone "..."
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        "¿Qué aventura tendremos hoy?",
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.indigo[400],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-                Text(
-                  "¿Qué aventura tendremos hoy?",
-                  style: TextStyle(fontSize: 16, color: Colors.indigo[400]),
-                ),
-                Spacer(),
+
+                // -----------------------------------
+                const Spacer(),
+
+                // Bloque de la frase animada
                 AnimatedBuilder(
                   animation: _slowFloatingController,
                   builder: (context, child) {
@@ -181,17 +203,17 @@ class _LobbyScreenState extends State<LobbyScreen>
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 45),
                     child: AnimatedSwitcher(
-                      duration: Duration(seconds: 2),
+                      duration: const Duration(seconds: 2),
                       child: Text(
                         _frases[_indiceFrase],
                         key: ValueKey(_indiceFrase),
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          fontSize: 22,
+                          fontSize: 20, // Ajustado para evitar colisiones
                           color: Colors.indigo[800],
                           fontWeight: FontWeight.w500,
                           fontStyle: FontStyle.italic,
-                          shadows: [
+                          shadows: const [
                             Shadow(color: Colors.white, blurRadius: 15),
                           ],
                         ),
@@ -199,13 +221,18 @@ class _LobbyScreenState extends State<LobbyScreen>
                     ),
                   ),
                 ),
-                Spacer(),
+
+                const Spacer(),
+
+                // Botonera inferior
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 25,
                     vertical: 50,
                   ),
                   child: Row(
+                    mainAxisAlignment:
+                        MainAxisAlignment.center, // Centra los botones
                     children: [
                       _buildChibiButton(
                         context,
@@ -214,10 +241,12 @@ class _LobbyScreenState extends State<LobbyScreen>
                         Colors.purple[200]!,
                         () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (c) => DiarioScreen()),
+                          MaterialPageRoute(
+                            builder: (c) => const DiarioScreen(),
+                          ),
                         ),
                       ),
-                      SizedBox(width: 20),
+                      const SizedBox(width: 15),
                       _buildChibiButton(
                         context,
                         "Mi Perfil",
@@ -231,7 +260,7 @@ class _LobbyScreenState extends State<LobbyScreen>
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 15),
                       _buildChibiButton(
                         context,
                         "Diccionario",
@@ -240,7 +269,7 @@ class _LobbyScreenState extends State<LobbyScreen>
                         () => Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (c) => DiccionarioScreen(),
+                            builder: (c) => const DiccionarioScreen(),
                           ),
                         ),
                       ),
