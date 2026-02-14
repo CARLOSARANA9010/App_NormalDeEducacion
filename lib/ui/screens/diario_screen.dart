@@ -6,6 +6,7 @@ import 'package:derechos_infancia_app/data/database/pedagogia_db.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
+import 'package:derechos_infancia_app/services/analisis_service.dart';
 
 class DiarioScreen extends StatefulWidget {
   const DiarioScreen({super.key});
@@ -24,6 +25,168 @@ class _DiarioScreenState extends State<DiarioScreen> {
     super.initState();
     _cargarNotasDeHive();
     _cargarNombre();
+  }
+
+  void _mostrarDialogoExportar(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+        title: const Text(
+          "Exportar PDF",
+          style: TextStyle(fontWeight: FontWeight.bold),
+          textAlign: TextAlign.center,
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "Selecciona el rango de registros que deseas incluir en tu reporte.",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 20),
+
+            // BOTÓN SEMANA ACTUAL
+            _botonOpcionExportar(
+              icon: Icons.calendar_today_rounded,
+              color: Colors.blue,
+              titulo: "Semana Actual",
+              subtitulo: "Últimos 7 días",
+              onTap: () {
+                Navigator.pop(context);
+                _generarPDFSemanal();
+              },
+            ),
+
+            const SizedBox(height: 12),
+
+            // BOTÓN HISTÓRICO
+            _botonOpcionExportar(
+              icon: Icons.history_edu_rounded,
+              color: Colors.indigo,
+              titulo: "Registro Histórico",
+              subtitulo: "Todas tus notas",
+              onTap: () {
+                Navigator.pop(context);
+                _crearArchivoPDF("REPORTE HISTÓRICO COMPLETO", _notasDeEstudio);
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("CANCELAR", style: TextStyle(color: Colors.grey)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Widget auxiliar para los botones del diálogo
+  Widget _botonOpcionExportar({
+    required IconData icon,
+    required Color color,
+    required String titulo,
+    required String subtitulo,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(15),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          border: Border.all(color: color.withOpacity(0.3)),
+          borderRadius: BorderRadius.circular(15),
+          color: color.withOpacity(0.05),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: color, size: 30),
+            const SizedBox(width: 15),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  titulo,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  subtitulo,
+                  style: const TextStyle(fontSize: 11, color: Colors.black54),
+                ),
+              ],
+            ),
+            const Spacer(),
+            const Icon(Icons.chevron_right, color: Colors.grey),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Lógica para filtrar solo la semana actual
+  void _generarPDFSemanal() {
+    DateTime ahora = DateTime.now();
+    List<Map<String, dynamic>> notasSemana = _notasDeEstudio.where((nota) {
+      DateTime fechaNota = _parseFecha(nota['fecha']);
+      // Filtramos notas de los últimos 7 días
+      return ahora.difference(fechaNota).inDays <= 7;
+    }).toList();
+
+    if (notasSemana.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("No tienes registros de esta semana todavía."),
+        ),
+      );
+      return;
+    }
+
+    _crearArchivoPDF("REPORTE PEDAGÓGICO SEMANAL", notasSemana);
+  }
+
+  void _confirmarEliminacion(int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("¿Eliminar registro?"),
+        content: const Text(
+          "Recuerda que los errores también son parte de tu diario pedagógico. ¿Estás segura de querer borrar esta evidencia?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancelar", style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red[400],
+              shape: const StadiumBorder(),
+            ),
+            onPressed: () {
+              setState(() {
+                _notasDeEstudio.removeAt(index);
+                _guardarEnHive();
+              });
+              Navigator.pop(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Registro eliminado correctamente"),
+                ),
+              );
+            },
+            child: const Text(
+              "Eliminar",
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   void _cargarNombre() async {
@@ -70,8 +233,6 @@ class _DiarioScreenState extends State<DiarioScreen> {
     await _myBox.put('lista_notas', _notasDeEstudio);
   }
 
-  // --- UI DIÁLOGOS ---
-
   void _explicarMetaSemanal() {
     showDialog(
       context: context,
@@ -106,7 +267,7 @@ class _DiarioScreenState extends State<DiarioScreen> {
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
         title: Text(
-          "Observación Completa",
+          "Observación del Docente",
           style: TextStyle(
             color: Colors.indigo[900],
             fontWeight: FontWeight.bold,
@@ -145,8 +306,7 @@ class _DiarioScreenState extends State<DiarioScreen> {
         actions: [
           IconButton(
             icon: Icon(Icons.picture_as_pdf, color: Colors.red[400]),
-            onPressed: () =>
-                _crearArchivoPDF("REPORTE PEDAGÓGICO", _notasDeEstudio),
+            onPressed: () => _mostrarDialogoExportar(context),
           ),
         ],
       ),
@@ -178,37 +338,12 @@ class _DiarioScreenState extends State<DiarioScreen> {
           );
           if (res != null) {
             setState(() {
-              final n = Map<String, dynamic>.from(res);
-              n['fecha'] = DateTime.now().toIso8601String();
-
-              // Lógica de Perfección Inteligente
-              String textoLower = (n['contenido'] ?? "")
-                  .toLowerCase()
-                  .replaceAll(RegExp(r'[.,!?;()]'), ' ');
-              List<String> palabras = textoLower.split(RegExp(r'\s+'));
-              List marcados = n['derechos'] ?? [];
-              List<String> sugerenciasAuto = [];
-
-              PedagogiaDB.derechos.forEach((nombre, datos) {
-                if (!marcados.contains(nombre)) {
-                  List<String> keywords = List<String>.from(
-                    datos['keywords'] ?? [],
-                  );
-                  if (keywords.any((k) => palabras.contains(k.toLowerCase()))) {
-                    if (nombre == "Alimentación" &&
-                        (textoLower.contains("cayó") ||
-                            textoLower.contains("riieron")))
-                      return;
-                    sugerenciasAuto.add(nombre);
-                  }
-                }
-              });
-
-              n['analisis_perfecto'] = sugerenciasAuto.isEmpty;
-              _notasDeEstudio.insert(0, n);
+              final nuevaNota = Map<String, dynamic>.from(res);
+              nuevaNota['fecha'] = DateTime.now().toIso8601String();
+              final notaAnalizada = AnalisisService.procesarAnalisis(nuevaNota);
+              _notasDeEstudio.insert(0, notaAnalizada);
               _guardarEnHive();
 
-              // Logro Investigadora
               if (_notasDeEstudio.length == 5) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -307,14 +442,27 @@ class _DiarioScreenState extends State<DiarioScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              if (nota['analisis_perfecto'] == true)
-                const Icon(Icons.verified, color: Colors.green, size: 16),
-              TextButton(
-                onPressed: () => _mostrarTextoCompleto(nota),
-                child: const Text("Ver nota"),
+              Row(
+                children: [
+                  if (nota['analisis_perfecto'] == true)
+                    const Icon(Icons.verified, color: Colors.green, size: 18),
+                  const SizedBox(width: 10),
+                  IconButton(
+                    constraints: const BoxConstraints(),
+                    padding: EdgeInsets.zero,
+                    icon: Icon(
+                      Icons.delete_outline,
+                      color: Colors.red[300],
+                      size: 20,
+                    ),
+                    onPressed: () =>
+                        _confirmarEliminacion(_notasDeEstudio.indexOf(nota)),
+                  ),
+                ],
               ),
             ],
           ),
+          const SizedBox(height: 10),
           Text(
             nota['contenido'] ?? "",
             maxLines: 2,
@@ -359,15 +507,7 @@ class _DiarioScreenState extends State<DiarioScreen> {
   void _mostrarAnalisisCompleto(Map<String, dynamic> nota) {
     List<dynamic> marcados = nota['derechos'] ?? [];
     String textoCuerpo = (nota['contenido'] ?? "").toLowerCase();
-    List<String> sugerencias = [];
-
-    PedagogiaDB.derechos.forEach((nombre, datos) {
-      if (!marcados.contains(nombre)) {
-        List<String> keywords = List<String>.from(datos['keywords'] ?? []);
-        if (keywords.any((k) => textoCuerpo.contains(k)))
-          sugerencias.add(nombre);
-      }
-    });
+    List<dynamic> sugerencias = nota['sugerencias_sistema'] ?? [];
 
     showModalBottomSheet(
       context: context,
@@ -384,21 +524,51 @@ class _DiarioScreenState extends State<DiarioScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                "Análisis Pedagógico",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.indigo[900],
-                ),
+              // --- ENCABEZADO ---
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    "Análisis Pedagógico",
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.indigo[900],
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      IconButton(
+                        icon: const Icon(
+                          Icons.visibility_outlined,
+                          color: Colors.blue,
+                        ),
+                        onPressed: () => _mostrarTextoCompleto(nota),
+                      ),
+                      IconButton(
+                        icon: Icon(
+                          Icons.delete_outline,
+                          color: Colors.red[300],
+                        ),
+                        onPressed: () {
+                          Navigator.pop(context);
+                          _confirmarEliminacion(_notasDeEstudio.indexOf(nota));
+                        },
+                      ),
+                    ],
+                  ),
+                ],
               ),
               const SizedBox(height: 25),
               _itemIcono("💡", _obtenerFeedbackPro(textoCuerpo)),
               const SizedBox(height: 30),
+
+              // --- SECCIÓN 1: DERECHOS IDENTIFICADOS ---
               const Text(
                 "📚 LO QUE IDENTIFICASTE:",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
+              const SizedBox(height: 10),
               ...marcados.map(
                 (d) => _buildDetailBox(
                   d,
@@ -406,21 +576,93 @@ class _DiarioScreenState extends State<DiarioScreen> {
                   false,
                 ),
               ),
+
+              // --- SECCIÓN 2: INTERDEPENDENCIA (LA RELACIÓN) ---
+              const SizedBox(height: 25),
+              Container(
+                padding: const EdgeInsets.all(15),
+                decoration: BoxDecoration(
+                  color: Colors.indigo[900]?.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(
+                    color: Colors.indigo[900]!.withOpacity(0.1),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.hub_outlined,
+                      color: Colors.indigo[900],
+                      size: 20,
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Text(
+                        "CONEXIÓN PEDAGÓGICA: Los derechos son interdependientes. Al trabajar uno, fortaleces los demás.",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // --- SECCIÓN 3: RESULTADO DINÁMICO (ÉXITO O SUGERENCIAS) ---
               const SizedBox(height: 30),
-              const Text(
-                "🧐 TE SUGERIMOS INTEGRAR:",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orange,
+              if (sugerencias.isEmpty)
+                // CASO: ANÁLISIS COMPLETO (SIN SUGERENCIAS)
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.check_circle_outline,
+                        color: Colors.green,
+                        size: 40,
+                      ),
+                      const SizedBox(height: 10),
+                      Text(
+                        "¡Felicidades, $_nombreDocente!",
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                      const Text(
+                        "Analizaste los derechos con gran precisión y pusiste todos los relacionados al texto.",
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 13, color: Colors.black87),
+                      ),
+                    ],
+                  ),
+                )
+              else ...[
+                // CASO: SUGERENCIAS DE CONEXIÓN
+                const Text(
+                  "🧐 CONEXIONES DETECTADAS:",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange,
+                  ),
                 ),
-              ),
-              ...sugerencias.map(
-                (d) => _buildDetailBox(
-                  d,
-                  PedagogiaDB.derechos[d]?['sugerencia'] ?? "",
-                  true,
+                const SizedBox(height: 10),
+                ...sugerencias.map(
+                  (d) => _buildDetailBox(
+                    d,
+                    PedagogiaDB.derechos[d]?['sugerencia'] ?? "",
+                    true,
+                  ),
                 ),
-              ),
+              ],
+              const SizedBox(height: 40),
             ],
           ),
         ),
@@ -457,7 +699,7 @@ class _DiarioScreenState extends State<DiarioScreen> {
 
   String _obtenerFeedbackPro(String t) {
     String texto = t.toLowerCase();
-    if (texto.contains("cayó") || texto.contains("riieron"))
+    if (texto.contains("cayo") || texto.contains("riieron"))
       return "¡$_nombreDocente! Gran sensibilidad al detectar este conflicto de convivencia.";
     if (texto.contains("jug") || texto.contains("recreo"))
       return "Excelente enfoque $_nombreDocente. El juego es un derecho vital.";
@@ -498,6 +740,15 @@ class _DiarioScreenState extends State<DiarioScreen> {
                       color: PdfColors.indigo900,
                     ),
                   ),
+                  // AQUÍ APARECE EL NOMBRE DEL FUTURO MAESTRO/A (EL USUARIO)
+                  pw.Text(
+                    "Futuro Docente: $_nombreDocente",
+                    style: pw.TextStyle(
+                      fontSize: 14,
+                      fontWeight: pw.FontWeight.bold,
+                      color: PdfColors.grey800,
+                    ),
+                  ),
                   pw.Text(
                     "Reporte de Observaciones Pedagógicas",
                     style: pw.TextStyle(fontSize: 12, color: PdfColors.grey700),
@@ -518,6 +769,7 @@ class _DiarioScreenState extends State<DiarioScreen> {
           pw.SizedBox(height: 20),
           pw.Divider(thickness: 2, color: PdfColors.indigo900),
           pw.SizedBox(height: 20),
+
           pw.Table(
             columnWidths: {
               0: const pw.FixedColumnWidth(80),
@@ -526,6 +778,7 @@ class _DiarioScreenState extends State<DiarioScreen> {
             },
             border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
             children: [
+              // --- CABECERA ---
               pw.TableRow(
                 decoration: const pw.BoxDecoration(color: PdfColors.indigo900),
                 children: [
@@ -564,6 +817,7 @@ class _DiarioScreenState extends State<DiarioScreen> {
                   ),
                 ],
               ),
+              // --- FILAS DE NOTAS ---
               ...notas.map(
                 (n) => pw.TableRow(
                   children: [
@@ -596,23 +850,34 @@ class _DiarioScreenState extends State<DiarioScreen> {
               ),
             ],
           ),
-          pw.SizedBox(height: 40),
+
+          // --- SECCIÓN DE FIRMA PARA EL DOCENTE VALIDADOR ---
+          pw.SizedBox(height: 80),
           pw.Align(
             alignment: pw.Alignment.centerRight,
-            child: pw.Container(
-              width: 150,
-              decoration: const pw.BoxDecoration(
-                border: pw.Border(
-                  top: pw.BorderSide(color: PdfColors.black, width: 1),
+            child: pw.Column(
+              children: [
+                pw.Container(
+                  width: 200,
+                  decoration: const pw.BoxDecoration(
+                    border: pw.Border(
+                      top: pw.BorderSide(color: PdfColors.black, width: 1),
+                    ),
+                  ),
                 ),
-              ),
-              padding: const pw.EdgeInsets.only(top: 5),
-              child: pw.Center(
-                child: pw.Text(
-                  "Firma del Docente",
-                  style: const pw.TextStyle(fontSize: 10),
+                pw.SizedBox(height: 8),
+                pw.Text(
+                  "Firma del Docente Responsable",
+                  style: pw.TextStyle(
+                    fontSize: 10,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
                 ),
-              ),
+                pw.Text(
+                  "(Sello y Validación de Prácticas)",
+                  style: pw.TextStyle(fontSize: 9, color: PdfColors.grey600),
+                ),
+              ],
             ),
           ),
         ],
@@ -622,7 +887,7 @@ class _DiarioScreenState extends State<DiarioScreen> {
     await Printing.layoutPdf(
       onLayout: (format) async => pdf.save(),
       name:
-          'Reporte_${_nombreDocente}_${DateTime.now().millisecondsSinceEpoch}.pdf',
+          'Reporte_Practicas_${_nombreDocente}_${DateTime.now().millisecondsSinceEpoch}.pdf',
     );
   }
 }
