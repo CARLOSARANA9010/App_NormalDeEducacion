@@ -5,10 +5,11 @@ import 'dart:math' as math;
 import 'package:flutter/scheduler.dart';
 import 'analisis_screen.dart';
 import 'diccionario_screen.dart';
+import 'package:derechos_infancia_app/ui/screens/perfil_screen.dart';
 
 class LobbyScreen extends StatefulWidget {
   final String nombreAlumna;
-  LobbyScreen({required this.nombreAlumna});
+  const LobbyScreen({super.key, required this.nombreAlumna});
 
   @override
   _LobbyScreenState createState() => _LobbyScreenState();
@@ -48,8 +49,9 @@ class _LobbyScreenState extends State<LobbyScreen>
     super.initState();
     _indiceFrase = math.Random().nextInt(_frases.length);
     _timerFrases = Timer.periodic(Duration(seconds: 6), (timer) {
-      if (mounted)
+      if (mounted) {
         setState(() => _indiceFrase = (_indiceFrase + 1) % _frases.length);
+      }
     });
     _slowFloatingController = AnimationController(
       duration: const Duration(seconds: 6),
@@ -218,6 +220,20 @@ class _LobbyScreenState extends State<LobbyScreen>
                       SizedBox(width: 20),
                       _buildChibiButton(
                         context,
+                        "Mi Perfil",
+                        Icons.account_circle,
+                        Colors.teal[300]!,
+                        () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (c) =>
+                                PerfilScreen(nombreAlumna: widget.nombreAlumna),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      _buildChibiButton(
+                        context,
                         "Diccionario",
                         Icons.menu_book,
                         Colors.orange[200]!,
@@ -323,10 +339,11 @@ class __FondoChibiFisicoState extends State<_FondoChibiFisico>
       );
     }
     _ticker = createTicker((elapsed) {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _updatePhysics();
         });
+      }
     })..start();
   }
 

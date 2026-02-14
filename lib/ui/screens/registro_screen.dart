@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'lobby_screen.dart';
 
 class RegistroScreen extends StatefulWidget {
+  const RegistroScreen({super.key});
+
   @override
   _RegistroScreenState createState() => _RegistroScreenState();
 }
@@ -10,12 +12,13 @@ class RegistroScreen extends StatefulWidget {
 class _RegistroScreenState extends State<RegistroScreen> {
   final TextEditingController _nameController = TextEditingController();
 
-  // Función para guardar el nombre y saltar al Lobby
   Future<void> _guardarNombreYContinuar() async {
     if (_nameController.text.isNotEmpty) {
       SharedPreferences prefs = await SharedPreferences.getInstance();
+      // Guardamos con la llave 'nombre_alumna'
       await prefs.setString('nombre_alumna', _nameController.text);
 
+      if (!mounted) return;
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
@@ -35,13 +38,13 @@ class _RegistroScreenState extends State<RegistroScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(Icons.face, size: 100, color: Colors.lightBlue[300]),
-            SizedBox(height: 20),
-            Text(
+            const SizedBox(height: 20),
+            const Text(
               "¡Bienvenid@!",
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            Text("Escribe tu nombre para comenzar"),
-            SizedBox(height: 20),
+            const Text("Escribe tu nombre para comenzar"),
+            const SizedBox(height: 20),
             TextField(
               controller: _nameController,
               decoration: InputDecoration(
@@ -53,14 +56,17 @@ class _RegistroScreenState extends State<RegistroScreen> {
                 hintText: "Tu nombre aquí...",
               ),
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _guardarNombreYContinuar,
-              child: Text("Empezar"),
               style: ElevatedButton.styleFrom(
-                shape: StadiumBorder(),
-                padding: EdgeInsets.symmetric(horizontal: 40, vertical: 15),
+                shape: const StadiumBorder(),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 40,
+                  vertical: 15,
+                ),
               ),
+              child: const Text("Empezar"),
             ),
           ],
         ),
